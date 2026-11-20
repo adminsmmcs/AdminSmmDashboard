@@ -62,32 +62,39 @@
             animation: fadeIn 0.25s ease-out forwards;
         }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
+            from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
-<body class="text-slate-800 antialiased flex justify-center min-h-screen">
+<body class="min-h-screen flex justify-center text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
 
-    <!-- กรอบจำลองหน้าจอมือถือ พร้อมพื้นหลังไล่สีและวงแสงเบลอให้เลเยอร์กระจกโดดเด่น -->
-    <div id="app-container" class="w-full max-w-md bg-gradient-to-br from-indigo-50/90 via-slate-100/95 to-sky-100/90 min-h-screen shadow-2xl relative flex flex-col overflow-hidden">
-        
-        <!-- วงแสงสีตกแต่งพื้นหลัง (Ambient Light Orbs) เพื่อให้เอฟเฟกต์กระจกดูมีมิติ -->
-        <div class="pointer-events-none fixed top-44 -left-16 w-64 h-64 bg-blue-300/35 rounded-full blur-3xl z-0"></div>
-        <div class="pointer-events-none fixed top-96 -right-16 w-72 h-72 bg-purple-300/30 rounded-full blur-3xl z-0"></div>
-        <div class="pointer-events-none fixed bottom-16 left-10 w-64 h-64 bg-emerald-200/35 rounded-full blur-3xl z-0"></div>
+    <!-- กรอบจำลองหน้าจอมือถือ (Mobile Container) -->
+    <div class="w-full max-w-md min-h-screen flex flex-col relative shadow-2xl overflow-hidden bg-gradient-to-br from-slate-200/80 via-indigo-50/70 to-sky-100/80">
 
-        <!-- Header ด้านบน พร้อมพื้นหลังรูปภาพจาก Google Drive -->
+        <!-- วงกลมแสงสีฟุ้งด้านหลังเพื่อขับมิติของ Glassmorphism -->
+        <div class="pointer-events-none absolute -top-24 -left-24 w-72 h-72 bg-indigo-400/25 rounded-full blur-3xl"></div>
+        <div class="pointer-events-none absolute top-1/3 -right-24 w-72 h-72 bg-sky-400/25 rounded-full blur-3xl"></div>
+        <div class="pointer-events-none absolute bottom-16 -left-20 w-72 h-72 bg-purple-400/20 rounded-full blur-3xl"></div>
+
+        <!-- Header ด้านบน พร้อมรูปภาพจาก Google Drive และภาพสำรองในตัว -->
         <header id="main-header" class="relative text-white pt-6 pb-8 px-5 min-h-[215px] flex flex-col justify-between rounded-b-3xl shadow-xl border-b border-white/30 transition-all duration-300 z-10 overflow-hidden bg-slate-900">
-            <!-- รูปภาพพื้นหลัง Header -->
-            <img id="header-bg-img" 
-                 src="https://drive.google.com/thumbnail?id=1_N204LsTva14YeSvRY8E1tGA4XNkyyy1&sz=w1200" 
-                 onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='https://lh3.googleusercontent.com/d/1_N204LsTva14YeSvRY8E1tGA4XNkyyy1=w1200';}else{this.onerror=null;this.src='https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?auto=format&fit=crop&w=1000&q=80';}"
-                 alt="Robinson Lifestyle Header" 
-                 class="absolute inset-0 w-full h-full object-cover object-center opacity-95 transition-transform duration-500">
+            <!-- ภาพพื้นหลังที่วาดฝังไว้ในโค้ด (แสดงทันทีและเป็นภาพสำรอง) -->
+            <canvas id="header-canvas" class="absolute inset-0 w-full h-full object-cover"></canvas>
+
+            <!-- รูปภาพจาก Google Drive (ใช้โดเมน lh3.googleusercontent.com เพื่อรองรับเบราว์เซอร์มือถือ) -->
+            <img
+                id="header-drive-img"
+                src="https://lh3.googleusercontent.com/d/1_N204LsTva14YeSvRY8E1tGA4XNkyyy1"
+                referrerpolicy="no-referrer"
+                alt="Header Background"
+                class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
+                onload="this.classList.remove('opacity-0'); this.classList.add('opacity-100');"
+                onerror="handleHeaderImgError(this);"
+            />
             
-            <!-- เลเยอร์ไล่ระดับสีเข้ม -->
-            <div class="absolute inset-0 bg-gradient-to-b from-slate-950/75 via-slate-900/15 to-slate-950/70"></div>
+            <!-- เลเยอร์ไล่ระดับสีเข้มเพื่อให้อ่านตัวอักษรชัดเจน -->
+            <div class="absolute inset-0 bg-gradient-to-b from-slate-950/55 via-slate-900/20 to-slate-950/65"></div>
 
             <!-- เนื้อหาภายใน Header (ไม่มีกล่องครอบ) -->
             <div class="relative z-10 flex items-start justify-between">
@@ -538,10 +545,118 @@
 
     <!-- JavaScript สำหรับควบคุมการทำงานของแอป -->
     <script>
+        // ลองเปลี่ยนลิงก์สำรองของ Google Drive อัตโนมัติหากลิงก์หลักถูกบล็อกบนมือถือ
+        const DRIVE_FILE_ID = '1_N204LsTva14YeSvRY8E1tGA4XNkyyy1';
+        const DRIVE_IMG_CANDIDATES = [
+            `https://lh3.googleusercontent.com/d/${DRIVE_FILE_ID}`,
+            `https://drive.google.com/thumbnail?id=${DRIVE_FILE_ID}&sz=w1200`,
+            `https://drive.google.com/uc?export=view&id=${DRIVE_FILE_ID}`
+        ];
+        let driveCandidateIdx = 0;
+
+        function handleHeaderImgError(imgEl) {
+            driveCandidateIdx++;
+            if (driveCandidateIdx < DRIVE_IMG_CANDIDATES.length) {
+                imgEl.src = DRIVE_IMG_CANDIDATES[driveCandidateIdx];
+            } else {
+                imgEl.remove();
+            }
+        }
+
+        // วาดภาพพื้นหลัง Header แบบฝังในโค้ดโดยตรง (ไม่ต้องพึ่งไฟล์ภายนอก)
+        function drawEmbeddedHeaderBg() {
+            const canvas = document.getElementById('header-canvas');
+            if (!canvas) return;
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            const w = rect.width || 448;
+            const h = rect.height || 215;
+
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+
+            // ท้องฟ้ายามพลบค่ำโทนฟ้าอมม่วงและแสงส้มอ่อน
+            const skyGrad = ctx.createLinearGradient(0, 0, w, h * 0.65);
+            skyGrad.addColorStop(0, '#1e293b');
+            skyGrad.addColorStop(0.45, '#475569');
+            skyGrad.addColorStop(0.8, '#94a3b8');
+            skyGrad.addColorStop(1, '#fdba74');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, w, h);
+
+            // แสงอบอุ่นขอบฟ้า
+            const glowGrad = ctx.createRadialGradient(w * 0.65, h * 0.35, 8, w * 0.65, h * 0.35, w * 0.45);
+            glowGrad.addColorStop(0, 'rgba(253, 186, 116, 0.55)');
+            glowGrad.addColorStop(0.5, 'rgba(125, 211, 252, 0.2)');
+            glowGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+            ctx.fillStyle = glowGrad;
+            ctx.fillRect(0, 0, w, h);
+
+            // ตัวอาคารศูนย์การค้าด้านหลัง
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(w * 0.04, h * 0.44, w * 0.76, h * 0.35);
+
+            // ซุ้มทางเข้าและไฟนีออนสีฟ้าสดใสของศูนย์การค้า
+            const facadeGrad = ctx.createLinearGradient(0, h * 0.52, w, h * 0.75);
+            facadeGrad.addColorStop(0, '#0284c7');
+            facadeGrad.addColorStop(0.5, '#38bdf8');
+            facadeGrad.addColorStop(1, '#0369a1');
+            ctx.fillStyle = facadeGrad;
+            ctx.beginPath();
+            ctx.moveTo(w * 0.06, h * 0.72);
+            ctx.quadraticCurveTo(w * 0.28, h * 0.50, w * 0.48, h * 0.55);
+            ctx.quadraticCurveTo(w * 0.68, h * 0.60, w * 0.86, h * 0.66);
+            ctx.lineTo(w * 0.86, h * 0.76);
+            ctx.lineTo(w * 0.06, h * 0.76);
+            ctx.closePath();
+            ctx.fill();
+
+            // ป้ายวงกลมโลโก้ร้านค้าเรียงตามแนวอาคาร
+            const badgeColors = ['#ef4444', '#22c55e', '#eab308', '#ec4899', '#a855f7', '#06b6d4', '#f97316', '#3b82f6'];
+            for (let i = 0; i < 12; i++) {
+                const bx = w * (0.14 + i * 0.055);
+                const by = h * (0.61 + Math.sin(i * 0.45) * 0.03);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.beginPath();
+                ctx.arc(bx, by, 5.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = badgeColors[i % badgeColors.length];
+                ctx.beginPath();
+                ctx.arc(bx, by, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // เสาป้ายสูงด้านขวา (Pylon Sign)
+            const pylonX = w * 0.81;
+            const pylonY = h * 0.10;
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(pylonX + 12, pylonY + 46, 12, h * 0.58);
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(pylonX, pylonY, 36, 48, 6);
+            } else {
+                ctx.rect(pylonX, pylonY, 36, 48);
+            }
+            ctx.fill();
+
+            // ตัวอักษร R สีเขียวบนป้ายสูง
+            ctx.fillStyle = '#22c55e';
+            ctx.font = 'bold 24px Inter, sans-serif';
+            ctx.fillText('R', pylonX + 9, pylonY + 29);
+
+            // ลานจอดรถด้านหน้าและแสงไฟถนน
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, h * 0.75, w, h * 0.25);
+
+            ctx.fillStyle = 'rgba(254, 240, 138, 0.35)';
+            ctx.fillRect(w * 0.08, h * 0.77, w * 0.78, h * 0.06);
+        }
+
         // =========================================================================
         // ตั้งค่า URL ของ Google Apps Script Web App ที่นี่
-        // วิธีรับ URL: เปิด Google Sheets -> Extensions -> Apps Script -> Deploy -> New deployment -> Web app
-        // ตั้งค่า Execute as: Me และ Who has access: Anyone -> คัดลอก Web app URL มาวางแทนที่ด้านล่าง
         // =========================================================================
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzC1gjjiv1qCuxWDBjrdMtZpKWxfIbxnT-zZGEPcXouvFWzhNRB9WkFpFsRQEOG8FU-/exec';
 
@@ -552,6 +667,7 @@
 
         // ตั้งค่าวันที่เริ่มต้นให้กับฟอร์มและโหลดข้อมูลล่าสุดจาก Google Sheets (ถ้ามีการตั้งค่า URL)
         window.addEventListener('DOMContentLoaded', () => {
+            drawEmbeddedHeaderBg();
             lucide.createIcons();
             renderRequests();
 
@@ -565,6 +681,8 @@
                 fetchRequestsFromSheet();
             }
         });
+
+        window.addEventListener('resize', drawEmbeddedHeaderBg);
 
         // ฟังก์ชันดึงข้อมูลรายการคำขอจาก Google Sheets
         async function fetchRequestsFromSheet() {
@@ -587,7 +705,6 @@
                 return { savedRemote: false };
             }
             try {
-                // ใช้ text/plain เพื่อหลีกเลี่ยงปัญหา CORS Preflight กับ Google Apps Script Web App
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     headers: {
@@ -608,21 +725,16 @@
 
         // ฟังก์ชันเปลี่ยนหน้า (Navigation)
         function navigateTo(viewName) {
-            // ซ่อนทุกหน้า
             const views = ['home', 'signage', 'sales', 'barcode', 'transfer', 'history'];
             views.forEach(v => {
                 document.getElementById(`view-${v}`).classList.add('hidden');
             });
 
-            // แสดงหน้าที่เลือก
             document.getElementById(`view-${viewName}`).classList.remove('hidden');
 
-            // จัดการ Header และปุ่มย้อนกลับ
             const backBtn = document.getElementById('back-btn');
             const headerTitle = document.getElementById('header-title');
-            const headerSubtitle = document.getElementById('header-subtitle');
 
-            // อัปเดตสถานะเมนูด้านล่าง
             document.querySelectorAll('.nav-item').forEach(el => {
                 el.classList.remove('text-indigo-600');
                 el.classList.add('text-slate-500');
@@ -659,7 +771,6 @@
                 }
             }
 
-            // เลื่อนกลับขึ้นบนสุด
             document.getElementById('content-area').scrollTo({ top: 0, behavior: 'smooth' });
             lucide.createIcons();
         }
@@ -681,7 +792,6 @@
             let icon = 'tag';
             let fields = {};
 
-            // ดึงข้อมูลตามประเภทฟอร์ม
             if (requestType === 'ขอป้าย') {
                 const type = document.getElementById('signage-type').value;
                 const brand = document.getElementById('signage-brand').value;
@@ -744,7 +854,6 @@
                 minute: '2-digit'
             }) + ' น.';
 
-            // สร้าง Object คำขอใหม่
             const newReq = {
                 id: 'REQ-' + Math.floor(261105 + Math.random() * 890),
                 type: requestType,
@@ -757,25 +866,17 @@
                 fields: fields
             };
 
-            // ส่งข้อมูลไปยัง Google Sheets (หากตั้งค่า URL ไว้แล้ว)
             const sheetResult = await sendRequestToGoogleSheet(newReq);
-
-            // เพิ่มเข้าด้านบนสุดของรายการบนหน้าเว็บ
             requestsData.unshift(newReq);
-
-            // รีเซ็ตฟอร์ม
             event.target.reset();
 
-            // คืนค่าปุ่มส่งฟอร์ม
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalBtnHTML;
             }
 
-            // อัปเดตรายการแสดงผล
             renderRequests();
 
-            // แสดงข้อความแจ้งเตือนและกลับหน้าหลัก
             if (sheetResult.savedRemote) {
                 showToast(`บันทึก "${requestType}" ลง Google Sheets แล้ว`);
             } else if (GOOGLE_SCRIPT_URL) {
@@ -791,7 +892,6 @@
             const recentContainer = document.getElementById('recent-requests-list');
             const allContainer = document.getElementById('all-requests-list');
 
-            // สร้าง HTML Card สำหรับแต่ละรายการ (แบบ Glass Card)
             const createCardHTML = (item) => {
                 const colorMap = {
                     blue: 'bg-blue-500/15 border-blue-400/30 text-blue-600',
@@ -825,7 +925,6 @@
                 `;
             };
 
-            // แสดง 3 รายการล่าสุดในหน้าหลัก
             if (requestsData.length === 0) {
                 recentContainer.innerHTML = `
                     <div class="text-center py-8 glass-card rounded-2xl">
@@ -836,7 +935,6 @@
                 recentContainer.innerHTML = requestsData.slice(0, 3).map(createCardHTML).join('');
             }
 
-            // กรองข้อมูลสำหรับหน้าประวัติทั้งหมด
             const filteredData = currentFilter === 'all' 
                 ? requestsData 
                 : requestsData.filter(item => item.status === currentFilter);
@@ -858,7 +956,6 @@
         function filterHistory(status) {
             currentFilter = status;
             
-            // อัปเดตสีปุ่ม Filter แบบ Glass
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.classList.remove('bg-indigo-600/90', 'text-white', 'font-semibold', 'shadow-sm');
                 btn.classList.add('bg-white/60', 'text-slate-600', 'font-medium', 'border', 'border-white/80');
