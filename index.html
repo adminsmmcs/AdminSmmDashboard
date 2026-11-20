@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Admin SMM - ระบบจัดการคำขอหน้าร้าน</title>
+    <!-- โหลด Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- โหลด Google Fonts: Sarabun และ Inter เพื่อความสวยงามและอ่านง่ายในภาษาไทย -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- โหลด Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Sarabun', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #cbd5e1 0%, #e2e8f0 50%, #cbd5e1 100%);
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Glassmorphism Utilities */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.06);
+        }
+        .glass-card-hover:hover {
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid rgba(255, 255, 255, 1);
+            box-shadow: 0 10px 36px 0 rgba(31, 38, 135, 0.1);
+        }
+        .glass-input {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.75);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+        }
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(99, 102, 241, 0.6);
+        }
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.85);
+            box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.04);
+        }
+        /* ซ่อน Scrollbar แต่ยังเลื่อนได้ */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* เอฟเฟกต์การเปลี่ยนหน้า */
+        .fade-in {
+            animation: fadeIn 0.25s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased flex justify-center min-h-screen">
+
+    <!-- กรอบจำลองหน้าจอมือถือ พร้อมพื้นหลังไล่สีและวงแสงเบลอให้เลเยอร์กระจกโดดเด่น -->
+    <div id="app-container" class="w-full max-w-md bg-gradient-to-br from-indigo-50/90 via-slate-100/95 to-sky-100/90 min-h-screen shadow-2xl relative flex flex-col overflow-hidden">
+        
+        <!-- วงแสงสีตกแต่งพื้นหลัง (Ambient Light Orbs) เพื่อให้เอฟเฟกต์กระจกดูมีมิติ -->
+        <div class="pointer-events-none fixed top-44 -left-16 w-64 h-64 bg-blue-300/35 rounded-full blur-3xl z-0"></div>
+        <div class="pointer-events-none fixed top-96 -right-16 w-72 h-72 bg-purple-300/30 rounded-full blur-3xl z-0"></div>
+        <div class="pointer-events-none fixed bottom-16 left-10 w-64 h-64 bg-emerald-200/35 rounded-full blur-3xl z-0"></div>
+
+        <!-- Header ด้านบน พร้อมพื้นหลังรูปภาพจาก Google Drive -->
+        <header id="main-header" class="relative text-white pt-6 pb-8 px-5 min-h-[215px] flex flex-col justify-between rounded-b-3xl shadow-xl border-b border-white/30 transition-all duration-300 z-10 overflow-hidden bg-slate-900">
+            <!-- รูปภาพพื้นหลัง Header -->
+            <img id="header-bg-img" 
+                 src="https://drive.google.com/thumbnail?id=1_N204LsTva14YeSvRY8E1tGA4XNkyyy1&sz=w1200" 
+                 onerror="if(!this.dataset.tried){this.dataset.tried=1;this.src='https://lh3.googleusercontent.com/d/1_N204LsTva14YeSvRY8E1tGA4XNkyyy1=w1200';}else{this.onerror=null;this.src='https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?auto=format&fit=crop&w=1000&q=80';}"
+                 alt="Robinson Lifestyle Header" 
+                 class="absolute inset-0 w-full h-full object-cover object-center opacity-95 transition-transform duration-500">
+            
+            <!-- เลเยอร์ไล่ระดับสีเข้ม -->
+            <div class="absolute inset-0 bg-gradient-to-b from-slate-950/75 via-slate-900/15 to-slate-950/70"></div>
+
+            <!-- เนื้อหาภายใน Header (ไม่มีกล่องครอบ) -->
+            <div class="relative z-10 flex items-start justify-between">
+                <div class="flex items-start gap-2.5">
+                    <!-- ปุ่มย้อนกลับ (ซ่อนเมื่ออยู่หน้าหลัก) -->
+                    <button id="back-btn" onclick="navigateTo('home')" class="hidden p-1.5 -ml-1 rounded-xl bg-black/30 hover:bg-black/45 active:bg-black/60 backdrop-blur-xs transition mt-0.5">
+                        <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                    </button>
+                    <div class="flex flex-col items-start">
+                        <h1 id="header-title" class="text-2xl font-bold tracking-tight drop-shadow leading-tight">Admin SMM</h1>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ส่วนล่างของ Header (ป้ายกระจกชื่อสถานที่) -->
+            <div class="relative z-10 flex justify-end items-end mt-auto pt-6">
+                <div class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/35 text-[11px] font-medium text-white shadow-sm">
+                    <i data-lucide="map-pin" class="w-3 h-3 text-emerald-300"></i>
+                    <span>Chachoengsao</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- พื้นที่เนื้อหาหลัก (เลื่อนขึ้นลงได้) -->
+        <main id="content-area" class="relative z-10 flex-1 overflow-y-auto no-scrollbar px-5 pt-5 pb-24">
+            
+            <!-- ==================== 1. หน้าหลัก (HOME) ==================== -->
+            <div id="view-home" class="space-y-6 fade-in">
+                
+                <!-- หัวข้อเมนูหลัก -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-base font-bold text-slate-800">เมนูบริการหลัก</h2>
+                        <span class="text-xs font-medium text-slate-500 bg-white/50 backdrop-blur-xs px-2.5 py-0.5 rounded-full border border-white/60">เลือกประเภทคำขอ</span>
+                    </div>
+
+                    <!-- ตารางเมนู 4 รายการ (2x2 Grid แบบ Glass Card) -->
+                    <div class="grid grid-cols-2 gap-3.5">
+                        
+                        <!-- เมนู 1: ขอป้าย -->
+                        <button onclick="navigateTo('signage')" class="group glass-card glass-card-hover p-4 rounded-2xl active:scale-95 transition-all text-left flex flex-col justify-between h-36 relative overflow-hidden">
+                            <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-400/15 rounded-full blur-md group-hover:scale-125 transition-transform"></div>
+                            <div class="w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-400/30 text-blue-600 flex items-center justify-center relative z-10 backdrop-blur-xs">
+                                <i data-lucide="tag" class="w-6 h-6"></i>
+                            </div>
+                            <div class="relative z-10">
+                                <span class="text-[11px] font-semibold text-blue-700 bg-blue-500/15 border border-blue-400/25 px-2 py-0.5 rounded-md">เมนู 1</span>
+                                <h3 class="font-bold text-slate-800 text-base mt-1">ขอป้าย</h3>
+                                <p class="text-[11px] text-slate-500 line-clamp-1">ป้ายราคา / ป้ายโปรโมชั่น</p>
+                            </div>
+                        </button>
+
+                        <!-- เมนู 2: ขอยอดขาย -->
+                        <button onclick="navigateTo('sales')" class="group glass-card glass-card-hover p-4 rounded-2xl active:scale-95 transition-all text-left flex flex-col justify-between h-36 relative overflow-hidden">
+                            <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-emerald-400/15 rounded-full blur-md group-hover:scale-125 transition-transform"></div>
+                            <div class="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-400/30 text-emerald-600 flex items-center justify-center relative z-10 backdrop-blur-xs">
+                                <i data-lucide="bar-chart-3" class="w-6 h-6"></i>
+                            </div>
+                            <div class="relative z-10">
+                                <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-500/15 border border-emerald-400/25 px-2 py-0.5 rounded-md">เมนู 2</span>
+                                <h3 class="font-bold text-slate-800 text-base mt-1">ขอยอดขาย</h3>
+                                <p class="text-[11px] text-slate-500 line-clamp-1">รายงานยอดขายรายวัน/เดือน</p>
+                            </div>
+                        </button>
+
+                        <!-- เมนู 3: ขอ Barcode Sheet -->
+                        <button onclick="navigateTo('barcode')" class="group glass-card glass-card-hover p-4 rounded-2xl active:scale-95 transition-all text-left flex flex-col justify-between h-36 relative overflow-hidden">
+                            <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-purple-400/15 rounded-full blur-md group-hover:scale-125 transition-transform"></div>
+                            <div class="w-11 h-11 rounded-xl bg-purple-500/15 border border-purple-400/30 text-purple-600 flex items-center justify-center relative z-10 backdrop-blur-xs">
+                                <i data-lucide="qr-code" class="w-6 h-6"></i>
+                            </div>
+                            <div class="relative z-10">
+                                <span class="text-[11px] font-semibold text-purple-700 bg-purple-500/15 border border-purple-400/25 px-2 py-0.5 rounded-md">เมนู 3</span>
+                                <h3 class="font-bold text-slate-800 text-base mt-1">ขอ Barcode Sheet</h3>
+                                <p class="text-[11px] text-slate-500 line-clamp-1">แผ่นรวมบาร์โค้ดสินค้า</p>
+                            </div>
+                        </button>
+
+                        <!-- เมนู 4: ขอโอนสินค้า -->
+                        <button onclick="navigateTo('transfer')" class="group glass-card glass-card-hover p-4 rounded-2xl active:scale-95 transition-all text-left flex flex-col justify-between h-36 relative overflow-hidden">
+                            <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-amber-400/15 rounded-full blur-md group-hover:scale-125 transition-transform"></div>
+                            <div class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-400/30 text-amber-600 flex items-center justify-center relative z-10 backdrop-blur-xs">
+                                <i data-lucide="arrow-left-right" class="w-6 h-6"></i>
+                            </div>
+                            <div class="relative z-10">
+                                <span class="text-[11px] font-semibold text-amber-700 bg-amber-500/15 border border-amber-400/25 px-2 py-0.5 rounded-md">เมนู 4</span>
+                                <h3 class="font-bold text-slate-800 text-base mt-1">ขอโอนสินค้า</h3>
+                                <p class="text-[11px] text-slate-500 line-clamp-1">โอนสินค้าระหว่างสาขา</p>
+                            </div>
+                        </button>
+
+                    </div>
+                </div>
+
+                <!-- รายการคำขอล่าสุด -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-base font-bold text-slate-800">คำขอล่าสุดของคุณ</h2>
+                        <button onclick="navigateTo('history')" class="text-xs font-semibold text-indigo-600 bg-white/60 hover:bg-white/90 px-3 py-1 rounded-full border border-white/80 transition">ดูทั้งหมด</button>
+                    </div>
+                    
+                    <div id="recent-requests-list" class="space-y-3">
+                        <!-- รายการจะถูกสร้างด้วย JavaScript -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ==================== 2. ฟอร์ม: ขอป้าย (SIGNAGE) ==================== -->
+            <div id="view-signage" class="hidden fade-in">
+                <form onsubmit="handleFormSubmit(event, 'ขอป้าย')" class="glass-card p-5 rounded-3xl space-y-4">
+                    <div class="flex items-center gap-3 pb-3 border-b border-white/60">
+                        <div class="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-400/30 text-blue-600 flex items-center justify-center">
+                            <i data-lucide="tag" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800">แบบฟอร์มขอป้าย</h3>
+                            <p class="text-xs text-slate-500">ระบุประเภทป้าย แบรนด์ และรายละเอียดโปรโมชั่น</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">1. ประเภทป้าย <span class="text-rose-500">*</span></label>
+                        <select id="signage-type" required class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                            <option value="A4P">A4P</option>
+                            <option value="A4L">A4L</option>
+                            <option value="A5L">A5L</option>
+                            <option value="A5P">A5P</option>
+                            <option value="A7L">A7L</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">2. Brand <span class="text-rose-500">*</span></label>
+                        <input type="text" id="signage-brand" required placeholder="ระบุชื่อแบรนด์สินค้า (เช่น L'Oreal, Nike)" class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">3. รายละเอียดโปรโมชั่น <span class="text-rose-500">*</span></label>
+                        <textarea id="signage-promo" required rows="2" placeholder="ระบุข้อความหรือเงื่อนไขโปรโมชั่นบนป้าย..." class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-500 outline-none text-sm"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">4. วันที่เริ่ม <span class="text-rose-500">*</span></label>
+                            <input type="date" id="signage-start" required class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">5. วันที่สิ้นสุด <span class="text-rose-500">*</span></label>
+                            <input type="date" id="signage-end" required class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 bg-blue-600/90 hover:bg-blue-600 backdrop-blur-md active:scale-[0.98] text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 border border-blue-400/30 transition flex items-center justify-center gap-2">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        ส่งคำขอป้าย
+                    </button>
+                </form>
+            </div>
+
+            <!-- ==================== 3. ฟอร์ม: ขอยอดขาย (SALES) ==================== -->
+            <div id="view-sales" class="hidden fade-in">
+                <form onsubmit="handleFormSubmit(event, 'ขอยอดขาย')" class="glass-card p-5 rounded-3xl space-y-4">
+                    <div class="flex items-center gap-3 pb-3 border-b border-white/60">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-400/30 text-emerald-600 flex items-center justify-center">
+                            <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800">แบบฟอร์มขอยอดขาย</h3>
+                            <p class="text-xs text-slate-500">ระบุข้อมูล S-Dept, Brand, Vendor และช่วงวันที่</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">1. S-Dept <span class="text-rose-500">*</span></label>
+                        <input type="text" id="sales-sdept" required placeholder="ระบุรหัส หรือชื่อ S-Dept (เช่น 101 - Cosmetics)" class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">2. Brand <span class="text-rose-500">*</span></label>
+                        <input type="text" id="sales-brand" required placeholder="ระบุชื่อแบรนด์สินค้า (เช่น L'Oreal, Nike)" class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">3. Vendor <span class="text-rose-500">*</span></label>
+                        <input type="text" id="sales-vendor" required placeholder="ระบุรหัส หรือชื่อ Vendor" class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">4. วันที่เริ่ม <span class="text-rose-500">*</span></label>
+                            <input type="date" id="sales-start" required class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">5. วันที่สิ้นสุด <span class="text-rose-500">*</span></label>
+                            <input type="date" id="sales-end" required class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 bg-emerald-600/90 hover:bg-emerald-600 backdrop-blur-md active:scale-[0.98] text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition flex items-center justify-center gap-2">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                        ส่งคำขอยอดขาย
+                    </button>
+                </form>
+            </div>
+
+            <!-- ==================== 4. ฟอร์ม: ขอ BARCODE SHEET ==================== -->
+            <div id="view-barcode" class="hidden fade-in">
+                <form onsubmit="handleFormSubmit(event, 'ขอ Barcode Sheet')" class="glass-card p-5 rounded-3xl space-y-4">
+                    <div class="flex items-center gap-3 pb-3 border-b border-white/60">
+                        <div class="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-400/30 text-purple-600 flex items-center justify-center">
+                            <i data-lucide="qr-code" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800">ขอ Barcode Sheet</h3>
+                            <p class="text-xs text-slate-500">ระบุข้อมูลสินค้าและรายละเอียดบาร์โค้ด</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">1. S-Dept <span class="text-rose-500">*</span></label>
+                        <input type="text" id="barcode-sdept" required placeholder="ระบุรหัส หรือชื่อ S-Dept (เช่น 101 - Cosmetics)" class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-purple-500 outline-none text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">2. Brand <span class="text-rose-500">*</span></label>
+                        <input type="text" id="barcode-brand" required placeholder="ระบุชื่อแบรนด์สินค้า (เช่น L'Oreal, Nike)" class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-purple-500 outline-none text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">3. Barcode <span class="text-rose-500">*</span></label>
+                        <input type="text" id="barcode-code" required placeholder="ระบุเลขบาร์โค้ดสินค้า (เช่น 8850123456789)" class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-purple-500 outline-none text-sm font-mono">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">4. Vender <span class="text-rose-500">*</span></label>
+                        <input type="text" id="barcode-vender" required placeholder="ระบุรหัส หรือชื่อ Vender" class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-purple-500 outline-none text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">5. รายละเอียดสินค้า <span class="text-rose-500">*</span></label>
+                        <textarea id="barcode-detail" required rows="2" placeholder="ระบุชื่อรุ่น สี ขนาด หรือรายละเอียดสินค้า..." class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-purple-500 outline-none text-sm"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">6. ประเภทรายการ <span class="text-rose-500">*</span></label>
+                        <input type="text" id="barcode-item-type" required placeholder="ระบุประเภทรายการ (เช่น สินค้าใหม่, ปรับราคา, จัดรายการ)" class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-purple-500 outline-none text-sm">
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 bg-purple-600/90 hover:bg-purple-600 backdrop-blur-md active:scale-[0.98] text-white font-semibold rounded-xl shadow-lg shadow-purple-500/25 border border-purple-400/30 transition flex items-center justify-center gap-2">
+                        <i data-lucide="printer" class="w-4 h-4"></i>
+                        ส่งคำขอ Barcode Sheet
+                    </button>
+                </form>
+            </div>
+
+            <!-- ==================== 5. ฟอร์ม: ขอโอนสินค้า (TRANSFER) ==================== -->
+            <div id="view-transfer" class="hidden fade-in">
+                <form onsubmit="handleFormSubmit(event, 'ขอโอนสินค้า')" class="glass-card p-5 rounded-3xl space-y-4">
+                    <div class="flex items-center gap-3 pb-3 border-b border-white/60">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-400/30 text-amber-600 flex items-center justify-center">
+                            <i data-lucide="arrow-left-right" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800">แบบฟอร์มขอโอนสินค้า</h3>
+                            <p class="text-xs text-slate-500">เลือกสาขาปลายทาง ระบุรายการสินค้าและเหตุผลในการขอโอน</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">1. สาขาปลายทาง <span class="text-rose-500">*</span></label>
+                        <select id="transfer-to-branch" required class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-amber-500 outline-none text-sm">
+                            <option value="" disabled selected>-- เลือกสาขาปลายทาง --</option>
+                            <option value="SUKHUMVIT">SUKHUMVIT</option>
+                            <option value="RANGSIT">RANGSIT</option>
+                            <option value="SRIRACHA">SRIRACHA</option>
+                            <option value="AYUTTHAYA">AYUTTHAYA</option>
+                            <option value="CHONBURI">CHONBURI</option>
+                            <option value="TRANG">TRANG</option>
+                            <option value="CHIANGRAI">CHIANGRAI</option>
+                            <option value="PHITSANULOK">PHITSANULOK</option>
+                            <option value="SUPHANBURI">SUPHANBURI</option>
+                            <option value="SURATTHANI">SURATTHANI</option>
+                            <option value="LAMPANG">LAMPANG</option>
+                            <option value="KANCHANABURI">KANCHANABURI</option>
+                            <option value="UBON RATCHATHANI">UBON RATCHATHANI</option>
+                            <option value="SAKON NAKHON">SAKON NAKHON</option>
+                            <option value="SARABURI">SARABURI</option>
+                            <option value="SURIN">SURIN</option>
+                            <option value="CHACHOENGSAO">CHACHOENGSAO</option>
+                            <option value="ROI ET">ROI ET</option>
+                            <option value="SAMUT PRAKAN">SAMUT PRAKAN</option>
+                            <option value="PRACHINBURI">PRACHINBURI</option>
+                            <option value="MUKDAHAN">MUKDAHAN</option>
+                            <option value="RAYONG">RAYONG</option>
+                            <option value="BURIRAM">BURIRAM</option>
+                            <option value="SRISAMARN">SRISAMARN</option>
+                            <option value="MAE SOT">MAE SOT</option>
+                            <option value="LOPBURI">LOPBURI</option>
+                            <option value="PHETCHABURI">PHETCHABURI</option>
+                            <option value="MAHACHAI">MAHACHAI</option>
+                            <option value="KAMPHAENG PHET">KAMPHAENG PHET</option>
+                            <option value="LIFESTYLE CHONBURI">LIFESTYLE CHONBURI</option>
+                            <option value="CHAIYAPHUM">CHAIYAPHUM</option>
+                            <option value="PHAYAO">PHAYAO</option>
+                            <option value="LATKRABANG">LATKRABANG</option>
+                            <option value="BOWIN">BOWIN</option>
+                            <option value="THALANG">THALANG</option>
+                            <option value="AYUTTHAYA 2">AYUTTHAYA 2</option>
+                            <option value="BAN CHANG">BAN CHANG</option>
+                            <option value="RATCHAPRUEK">RATCHAPRUEK</option>
+                            <option value="CHALONG">CHALONG</option>
+                            <option value="JUNGCEYLON">JUNGCEYLON</option>
+                            <option value="NAKHON1">NAKHON1</option>
+                            <option value="NAKHON2">NAKHON2</option>
+                            <option value="HADYAI">HADYAI</option>
+                            <option value="CHIANGMAI">CHIANGMAI</option>
+                            <option value="RATCHABURI">RATCHABURI</option>
+                            <option value="CHANTABURI">CHANTABURI</option>
+                        </select>
+                    </div>
+
+                    <!-- รายการที่ 2 -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">2. Barcode สินค้า และจำนวนที่ต้องการ <span class="text-rose-500">*</span></label>
+                        <div class="flex gap-2">
+                            <input type="text" id="transfer-barcode-1" required placeholder="Barcode สินค้า 1" class="flex-1 min-w-0 p-2.5 rounded-xl glass-input focus:ring-2 focus:ring-amber-500 outline-none text-sm font-mono">
+                            <input type="number" id="transfer-qty-1" required min="1" placeholder="จำนวน" class="w-24 shrink-0 p-2.5 rounded-xl glass-input focus:ring-2 focus:ring-amber-500 outline-none text-sm text-center">
+                        </div>
+                    </div>
+
+                    <!-- รายการที่ 3 -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">3. Barcode สินค้า และจำนวนที่ต้องการ</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="transfer-barcode-2" placeholder="Barcode สินค้า 2" class="flex-1 min-w-0 p-2.5 rounded-xl glass-input focus:ring-2 focus:ring-amber-500 outline-none text-sm font-mono">
+                            <input type="number" id="transfer-qty-2" min="1" placeholder="จำนวน" class="w-24 shrink-0 p-2.5 rounded-xl glass-input focus:ring-2 focus:ring-amber-500 outline-none text-sm text-center">
+                        </div>
+                    </div>
+
+                    <!-- รายการที่ 4 -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">4. Barcode สินค้า และจำนวนที่ต้องการ</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="transfer-barcode-3" placeholder="Barcode สินค้า 3" class="flex-1 min-w-0 p-2.5 rounded-xl glass-input focus:ring-2 focus:ring-amber-500 outline-none text-sm font-mono">
+                            <input type="number" id="transfer-qty-3" min="1" placeholder="จำนวน" class="w-24 shrink-0 p-2.5 rounded-xl glass-input focus:ring-2 focus:ring-amber-500 outline-none text-sm text-center">
+                        </div>
+                    </div>
+
+                    <!-- รายการที่ 5 -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">5. Barcode สินค้า และจำนวนที่ต้องการ</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="transfer-barcode-4" placeholder="Barcode สินค้า 4" class="flex-1 min-w-0 p-2.5 rounded-xl glass-input focus:ring-2 focus:ring-amber-500 outline-none text-sm font-mono">
+                            <input type="number" id="transfer-qty-4" min="1" placeholder="จำนวน" class="w-24 shrink-0 p-2.5 rounded-xl glass-input focus:ring-2 focus:ring-amber-500 outline-none text-sm text-center">
+                        </div>
+                    </div>
+
+                    <!-- รายการที่ 6 -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">6. Barcode สินค้า และจำนวนที่ต้องการ</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="transfer-barcode-5" placeholder="Barcode สินค้า 5" class="flex-1 min-w-0 p-2.5 rounded-xl glass-input focus:ring-2 focus:ring-amber-500 outline-none text-sm font-mono">
+                            <input type="number" id="transfer-qty-5" min="1" placeholder="จำนวน" class="w-24 shrink-0 p-2.5 rounded-xl glass-input focus:ring-2 focus:ring-amber-500 outline-none text-sm text-center">
+                        </div>
+                    </div>
+
+                    <!-- รายการที่ 7 -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">7. เหตุผลในการขอโอน <span class="text-rose-500">*</span></label>
+                        <textarea id="transfer-reason" required rows="2" placeholder="ระบุเหตุผลในการขอโอนสินค้า (เช่น สินค้าหน้าร้านหมด, ลูกค้าสั่งจอง)..." class="w-full p-3 rounded-xl glass-input focus:ring-2 focus:ring-amber-500 outline-none text-sm"></textarea>
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 bg-amber-600/90 hover:bg-amber-600 backdrop-blur-md active:scale-[0.98] text-white font-semibold rounded-xl shadow-lg shadow-amber-500/25 border border-amber-400/30 transition flex items-center justify-center gap-2">
+                        <i data-lucide="truck" class="w-4 h-4"></i>
+                        ยืนยันคำขอโอนสินค้า
+                    </button>
+                </form>
+            </div>
+
+            <!-- ==================== 6. หน้าประวัติคำขอทั้งหมด (HISTORY) ==================== -->
+            <div id="view-history" class="hidden fade-in space-y-4">
+                <!-- ตัวกรองสถานะ -->
+                <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <button onclick="filterHistory('all')" id="filter-all" class="filter-btn px-4 py-1.5 rounded-full text-xs font-semibold bg-indigo-600/90 backdrop-blur-md text-white shadow-sm whitespace-nowrap transition">ทั้งหมด</button>
+                    <button onclick="filterHistory('รอดำเนินการ')" id="filter-pending" class="filter-btn px-4 py-1.5 rounded-full text-xs font-medium bg-white/60 backdrop-blur-md text-slate-600 border border-white/80 whitespace-nowrap transition">รอดำเนินการ</button>
+                    <button onclick="filterHistory('ทำแล้ว')" id="filter-approved" class="filter-btn px-4 py-1.5 rounded-full text-xs font-medium bg-white/60 backdrop-blur-md text-slate-600 border border-white/80 whitespace-nowrap transition">ทำแล้ว</button>
+                </div>
+
+                <!-- รายการประวัติทั้งหมด -->
+                <div id="all-requests-list" class="space-y-3">
+                    <!-- ข้อมูลจะถูก Render ด้วย JS -->
+                </div>
+            </div>
+
+        </main>
+
+        <!-- แถบนำทางด้านล่าง (Bottom Navigation Bar แบบ Glass) -->
+        <nav class="fixed bottom-0 w-full max-w-md glass-nav px-6 py-2.5 flex items-center justify-around z-20 rounded-t-3xl">
+            <button onclick="navigateTo('home')" id="nav-home" class="nav-item flex flex-col items-center gap-1 text-indigo-600 transition">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span class="text-[11px] font-semibold">หน้าหลัก</span>
+            </button>
+            <button onclick="navigateTo('history')" id="nav-history" class="nav-item flex flex-col items-center gap-1 text-slate-500 hover:text-slate-700 transition">
+                <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                <span class="text-[11px] font-medium">ประวัติคำขอ</span>
+            </button>
+            <a href="https://line.me/ti/p/5NLbYAkhYv" target="_blank" rel="noopener noreferrer" class="nav-item flex flex-col items-center gap-1 text-slate-500 hover:text-emerald-600 transition">
+                <i data-lucide="headphones" class="w-5 h-5"></i>
+                <span class="text-[11px] font-medium">ติดต่อแอดมิน</span>
+            </a>
+        </nav>
+
+        <!-- Toast Notification (กล่องแจ้งเตือนด้านบนแบบ Dark Glass) -->
+        <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-slate-900/80 backdrop-blur-xl border border-white/20 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 z-50 transition-all duration-300 opacity-0 -translate-y-10 pointer-events-none">
+            <div id="toast-icon" class="w-7 h-7 rounded-full bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 flex items-center justify-center shrink-0">
+                <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+            </div>
+            <p id="toast-message" class="text-sm font-medium">บันทึกข้อมูลสำเร็จ</p>
+        </div>
+
+        <!-- Modal ติดต่อแอดมิน (แบบ Glassmorphism) -->
+        <div id="support-modal" onclick="if(event.target === this) closeSupportModal()" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-5">
+            <div class="glass-card w-full max-w-xs rounded-3xl p-5 text-center fade-in border border-white/80 shadow-2xl">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-500/15 border border-indigo-400/30 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="headphones" class="w-6 h-6"></i>
+                </div>
+                <h3 class="font-bold text-slate-800 text-base">ติดต่อแอดมิน SMM</h3>
+                <p class="text-xs text-slate-600 mt-1">สอบถามสถานะหรือแจ้งปัญหาการใช้งานระบบ</p>
+                <div class="mt-4 bg-white/60 p-3.5 rounded-2xl border border-white text-left space-y-2 shadow-xs">
+                    <p class="text-xs text-slate-600 flex justify-between"><span>เบอร์ภายใน:</span> <span class="font-bold text-slate-800">1045, 1046</span></p>
+                    <div class="text-xs text-slate-600 flex items-center justify-between gap-2">
+                        <span>ติดต่อแอดมิน (LINE):</span>
+                        <a href="https://line.me/ti/p/5NLbYAkhYv" target="_blank" rel="noopener noreferrer" class="font-bold text-emerald-600 hover:text-emerald-700 underline truncate">แชทผ่าน LINE</a>
+                    </div>
+                </div>
+                <a href="https://line.me/ti/p/5NLbYAkhYv" target="_blank" rel="noopener noreferrer" class="mt-4 w-full py-2.5 bg-emerald-600/90 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-emerald-500/25 transition flex items-center justify-center gap-2">
+                    <i data-lucide="message-circle" class="w-4 h-4"></i>
+                    เปิดลิงก์ติดต่อแอดมิน
+                </a>
+                <button onclick="closeSupportModal()" class="mt-2 w-full py-2 bg-white/70 hover:bg-white text-slate-700 text-xs font-semibold rounded-xl border border-white transition">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript สำหรับควบคุมการทำงานของแอป -->
+    <script>
+        // =========================================================================
+        // ตั้งค่า URL ของ Google Apps Script Web App ที่นี่
+        // วิธีรับ URL: เปิด Google Sheets -> Extensions -> Apps Script -> Deploy -> New deployment -> Web app
+        // ตั้งค่า Execute as: Me และ Who has access: Anyone -> คัดลอก Web app URL มาวางแทนที่ด้านล่าง
+        // =========================================================================
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzC1gjjiv1qCuxWDBjrdMtZpKWxfIbxnT-zZGEPcXouvFWzhNRB9WkFpFsRQEOG8FU-/exec';
+
+        // เก็บรายการคำขอที่ส่งใหม่หรือดึงมาจาก Google Sheets
+        let requestsData = [];
+
+        let currentFilter = 'all';
+
+        // ตั้งค่าวันที่เริ่มต้นให้กับฟอร์มและโหลดข้อมูลล่าสุดจาก Google Sheets (ถ้ามีการตั้งค่า URL)
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            renderRequests();
+
+            const today = new Date().toISOString().split('T')[0];
+            ['sales-start', 'sales-end', 'signage-start', 'signage-end'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = today;
+            });
+
+            if (GOOGLE_SCRIPT_URL) {
+                fetchRequestsFromSheet();
+            }
+        });
+
+        // ฟังก์ชันดึงข้อมูลรายการคำขอจาก Google Sheets
+        async function fetchRequestsFromSheet() {
+            if (!GOOGLE_SCRIPT_URL) return;
+            try {
+                const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=list`);
+                const result = await response.json();
+                if (result.status === 'success' && Array.isArray(result.data) && result.data.length > 0) {
+                    requestsData = result.data;
+                    renderRequests();
+                }
+            } catch (error) {
+                console.error('เกิดข้อผิดพลาดในการดึงข้อมูลจาก Google Sheets:', error);
+            }
+        }
+
+        // ฟังก์ชันส่งข้อมูลไปยัง Google Apps Script Web App
+        async function sendRequestToGoogleSheet(payload) {
+            if (!GOOGLE_SCRIPT_URL) {
+                return { savedRemote: false };
+            }
+            try {
+                // ใช้ text/plain เพื่อหลีกเลี่ยงปัญหา CORS Preflight กับ Google Apps Script Web App
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    return { savedRemote: true };
+                }
+                throw new Error(result.message || 'บันทึกไม่สำเร็จ');
+            } catch (error) {
+                console.error('ส่งข้อมูลไป Google Sheets ไม่สำเร็จ:', error);
+                return { savedRemote: false, error: error.message };
+            }
+        }
+
+        // ฟังก์ชันเปลี่ยนหน้า (Navigation)
+        function navigateTo(viewName) {
+            // ซ่อนทุกหน้า
+            const views = ['home', 'signage', 'sales', 'barcode', 'transfer', 'history'];
+            views.forEach(v => {
+                document.getElementById(`view-${v}`).classList.add('hidden');
+            });
+
+            // แสดงหน้าที่เลือก
+            document.getElementById(`view-${viewName}`).classList.remove('hidden');
+
+            // จัดการ Header และปุ่มย้อนกลับ
+            const backBtn = document.getElementById('back-btn');
+            const headerTitle = document.getElementById('header-title');
+            const headerSubtitle = document.getElementById('header-subtitle');
+
+            // อัปเดตสถานะเมนูด้านล่าง
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('text-indigo-600');
+                el.classList.add('text-slate-500');
+            });
+
+            if (viewName === 'home') {
+                backBtn.classList.add('hidden');
+                headerTitle.textContent = 'Admin SMM';
+                headerTitle.classList.remove('text-lg');
+                headerTitle.classList.add('text-2xl');
+                document.getElementById('nav-home').classList.add('text-indigo-600');
+                document.getElementById('nav-home').classList.remove('text-slate-500');
+            } else {
+                backBtn.classList.remove('hidden');
+                headerTitle.classList.remove('text-2xl');
+                headerTitle.classList.add('text-lg');
+
+                const titles = {
+                    'signage': ['1. ขอป้าย', 'สั่งทำป้ายราคาและป้ายโปรโมชั่น'],
+                    'sales': ['2. ขอยอดขาย', 'ขอรายงานสรุปยอดขายของสาขา'],
+                    'barcode': ['3. ขอ Barcode Sheet', 'ขอไฟล์บาร์โค้ดสำหรับสแกนหน้าร้าน'],
+                    'transfer': ['4. ขอโอนสินค้า', 'ทำรายการขอโอนย้ายสต็อกสินค้า'],
+                    'history': ['ประวัติคำขอทั้งหมด', 'ติดตามสถานะคำขอที่คุณส่งไปยังแอดมิน']
+                };
+
+                headerTitle.textContent = titles[viewName][0];
+
+                if (viewName === 'history') {
+                    document.getElementById('nav-history').classList.add('text-indigo-600');
+                    document.getElementById('nav-history').classList.remove('text-slate-500');
+                    if (GOOGLE_SCRIPT_URL) {
+                        fetchRequestsFromSheet();
+                    }
+                }
+            }
+
+            // เลื่อนกลับขึ้นบนสุด
+            document.getElementById('content-area').scrollTo({ top: 0, behavior: 'smooth' });
+            lucide.createIcons();
+        }
+
+        // ฟังก์ชันจัดการเมื่อกดส่งฟอร์ม
+        async function handleFormSubmit(event, requestType) {
+            event.preventDefault();
+
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalBtnHTML = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span> กำลังส่งข้อมูล...`;
+            }
+
+            let title = '';
+            let detail = '';
+            let color = 'blue';
+            let icon = 'tag';
+            let fields = {};
+
+            // ดึงข้อมูลตามประเภทฟอร์ม
+            if (requestType === 'ขอป้าย') {
+                const type = document.getElementById('signage-type').value;
+                const brand = document.getElementById('signage-brand').value;
+                const promo = document.getElementById('signage-promo').value;
+                const start = document.getElementById('signage-start').value;
+                const end = document.getElementById('signage-end').value;
+                title = `ป้าย ${type} • Brand: ${brand}`;
+                detail = `${promo} (${start} ถึง ${end})`;
+                color = 'blue';
+                icon = 'tag';
+                fields = { type, brand, promo, start, end };
+            } else if (requestType === 'ขอยอดขาย') {
+                const sdept = document.getElementById('sales-sdept').value;
+                const brand = document.getElementById('sales-brand').value;
+                const vendor = document.getElementById('sales-vendor').value;
+                const start = document.getElementById('sales-start').value;
+                const end = document.getElementById('sales-end').value;
+                title = `S-Dept: ${sdept} • Brand: ${brand}`;
+                detail = `Vendor: ${vendor} (${start} ถึง ${end})`;
+                color = 'emerald';
+                icon = 'bar-chart-3';
+                fields = { sdept, brand, vendor, start, end };
+            } else if (requestType === 'ขอ Barcode Sheet') {
+                const sdept = document.getElementById('barcode-sdept').value;
+                const brand = document.getElementById('barcode-brand').value;
+                const barcode = document.getElementById('barcode-code').value;
+                const vender = document.getElementById('barcode-vender').value;
+                const itemDetail = document.getElementById('barcode-detail').value;
+                const itemType = document.getElementById('barcode-item-type').value;
+                title = `S-Dept: ${sdept} • Brand: ${brand} (${barcode})`;
+                detail = `Vender: ${vender} • ${itemType} • ${itemDetail}`;
+                color = 'purple';
+                icon = 'qr-code';
+                fields = { sdept, brand, barcode, vender, itemDetail, itemType };
+            } else if (requestType === 'ขอโอนสินค้า') {
+                const toBranch = document.getElementById('transfer-to-branch').value;
+                const reason = document.getElementById('transfer-reason').value;
+                const items = [];
+                const transferRows = [];
+                for (let i = 1; i <= 5; i++) {
+                    const b = document.getElementById(`transfer-barcode-${i}`).value.trim();
+                    const q = document.getElementById(`transfer-qty-${i}`).value.trim();
+                    if (b) {
+                        items.push(`${b}${q ? ` (${q} ชิ้น)` : ''}`);
+                        transferRows.push({ barcode: b, qty: q || '' });
+                    }
+                }
+                title = `สาขาปลายทาง: ${toBranch}`;
+                detail = `${items.join(', ')} • เหตุผล: ${reason}`;
+                color = 'amber';
+                icon = 'arrow-left-right';
+                fields = { toBranch, items: transferRows, reason };
+            }
+
+            const nowText = new Date().toLocaleString('th-TH', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }) + ' น.';
+
+            // สร้าง Object คำขอใหม่
+            const newReq = {
+                id: 'REQ-' + Math.floor(261105 + Math.random() * 890),
+                type: requestType,
+                title: title,
+                detail: detail,
+                date: nowText,
+                status: 'รอดำเนินการ',
+                color: color,
+                icon: icon,
+                fields: fields
+            };
+
+            // ส่งข้อมูลไปยัง Google Sheets (หากตั้งค่า URL ไว้แล้ว)
+            const sheetResult = await sendRequestToGoogleSheet(newReq);
+
+            // เพิ่มเข้าด้านบนสุดของรายการบนหน้าเว็บ
+            requestsData.unshift(newReq);
+
+            // รีเซ็ตฟอร์ม
+            event.target.reset();
+
+            // คืนค่าปุ่มส่งฟอร์ม
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHTML;
+            }
+
+            // อัปเดตรายการแสดงผล
+            renderRequests();
+
+            // แสดงข้อความแจ้งเตือนและกลับหน้าหลัก
+            if (sheetResult.savedRemote) {
+                showToast(`บันทึก "${requestType}" ลง Google Sheets แล้ว`);
+            } else if (GOOGLE_SCRIPT_URL) {
+                showToast(`บันทึกในเครื่องแล้ว (เชื่อมต่อ Google Sheets ไม่สำเร็จ)`);
+            } else {
+                showToast(`ส่งคำขอ "${requestType}" เรียบร้อยแล้ว (โหมดทดลอง)`);
+            }
+            navigateTo('home');
+        }
+
+        // ฟังก์ชันแสดงรายการคำขอ (ทั้งหน้าหลักและหน้าประวัติ)
+        function renderRequests() {
+            const recentContainer = document.getElementById('recent-requests-list');
+            const allContainer = document.getElementById('all-requests-list');
+
+            // สร้าง HTML Card สำหรับแต่ละรายการ (แบบ Glass Card)
+            const createCardHTML = (item) => {
+                const colorMap = {
+                    blue: 'bg-blue-500/15 border-blue-400/30 text-blue-600',
+                    emerald: 'bg-emerald-500/15 border-emerald-400/30 text-emerald-600',
+                    purple: 'bg-purple-500/15 border-purple-400/30 text-purple-600',
+                    amber: 'bg-amber-500/15 border-amber-400/30 text-amber-600'
+                };
+
+                const statusBadge = item.status === 'ทำแล้ว'
+                    ? `<span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-400/30 backdrop-blur-xs">ทำแล้ว</span>`
+                    : `<span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700 border border-amber-400/30 backdrop-blur-xs">รอดำเนินการ</span>`;
+
+                return `
+                    <div class="glass-card glass-card-hover p-3.5 rounded-2xl flex items-start gap-3.5 transition">
+                        <div class="w-10 h-10 rounded-xl border ${colorMap[item.color]} flex items-center justify-center shrink-0 mt-0.5 backdrop-blur-xs">
+                            <i data-lucide="${item.icon}" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs font-bold text-slate-500">${item.id} • ${item.type}</span>
+                                ${statusBadge}
+                            </div>
+                            <h4 class="text-sm font-bold text-slate-800 truncate mt-0.5">${item.title}</h4>
+                            <p class="text-xs text-slate-600 truncate mt-0.5">${item.detail}</p>
+                            <div class="flex items-center gap-1 text-[11px] text-slate-500 mt-1.5">
+                                <i data-lucide="clock" class="w-3 h-3"></i>
+                                <span>${item.date}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // แสดง 3 รายการล่าสุดในหน้าหลัก
+            if (requestsData.length === 0) {
+                recentContainer.innerHTML = `
+                    <div class="text-center py-8 glass-card rounded-2xl">
+                        <p class="text-sm text-slate-500">ยังไม่มีรายการคำขอ</p>
+                    </div>
+                `;
+            } else {
+                recentContainer.innerHTML = requestsData.slice(0, 3).map(createCardHTML).join('');
+            }
+
+            // กรองข้อมูลสำหรับหน้าประวัติทั้งหมด
+            const filteredData = currentFilter === 'all' 
+                ? requestsData 
+                : requestsData.filter(item => item.status === currentFilter);
+
+            if (filteredData.length === 0) {
+                allContainer.innerHTML = `
+                    <div class="text-center py-10 glass-card rounded-2xl">
+                        <p class="text-sm text-slate-500">ไม่พบรายการคำขอในหมวดหมู่นี้</p>
+                    </div>
+                `;
+            } else {
+                allContainer.innerHTML = filteredData.map(createCardHTML).join('');
+            }
+
+            lucide.createIcons();
+        }
+
+        // ฟังก์ชันกรองประวัติคำขอ
+        function filterHistory(status) {
+            currentFilter = status;
+            
+            // อัปเดตสีปุ่ม Filter แบบ Glass
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-600/90', 'text-white', 'font-semibold', 'shadow-sm');
+                btn.classList.add('bg-white/60', 'text-slate-600', 'font-medium', 'border', 'border-white/80');
+            });
+
+            const activeBtnId = status === 'all' ? 'filter-all' : (status === 'รอดำเนินการ' ? 'filter-pending' : 'filter-approved');
+            const activeBtn = document.getElementById(activeBtnId);
+            activeBtn.classList.remove('bg-white/60', 'text-slate-600', 'font-medium', 'border', 'border-white/80');
+            activeBtn.classList.add('bg-indigo-600/90', 'text-white', 'font-semibold', 'shadow-sm');
+
+            renderRequests();
+        }
+
+        // ฟังก์ชันแสดง Toast Notification
+        let toastTimeout;
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            
+            toastMsg.textContent = message;
+            toast.classList.remove('opacity-0', '-translate-y-10');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', '-translate-y-10');
+            }, 3000);
+        }
+
+        // ฟังก์ชันเปิด/ปิด Modal ติดต่อแอดมิน
+        function showSupportModal() {
+            document.getElementById('support-modal').classList.remove('hidden');
+        }
+        function closeSupportModal() {
+            document.getElementById('support-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
